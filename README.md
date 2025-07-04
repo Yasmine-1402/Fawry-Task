@@ -4,26 +4,7 @@ This is a comprehensive desktop e-commerce application built with Java and JavaF
 
 The project was developed following an agile sprint methodology, evolving from a basic console application to a fully interactive and modern-looking Graphical User Interface (GUI).
 
-## Screenshots
 
-<table>
-  <tr>
-    <td align="center"><strong>Login Screen</strong></td>
-    <td align="center"><strong>Main Store View</strong></td>
-  </tr>
-  <tr>
-    <td><img src="https://i.imgur.com/L7rPz5p.png" alt="Login Screen" width="400"></td>
-    <td><img src="https://i.imgur.com/G3e3SgR.png" alt="Main Store View" width="400"></td>
-  </tr>
-   <tr>
-    <td align="center"><strong>Error/Confirmation Dialog</strong></td>
-    <td align="center"><strong>Cart with Items</strong></td>
-  </tr>
-  <tr>
-    <td><img src="https://i.imgur.com/9nJkM2R.png" alt="Alert Dialog" width="400"></td>
-    <td><img src="https://i.imgur.com/K5bLqJ1.png" alt="Cart with items" width="400"></td>
-  </tr>
-</table>
 
 ## Features
 
