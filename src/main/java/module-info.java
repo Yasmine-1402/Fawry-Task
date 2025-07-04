@@ -4,6 +4,7 @@ module com.example.fawry {
     // 1. You need to declare that your module requires the JavaFX modules it uses.
     requires javafx.controls;
     requires javafx.fxml;
+    requires java.desktop;
 
     // 2. You must OPEN your UI package to the JavaFX framework.
     //    This is the direct fix for your error.
