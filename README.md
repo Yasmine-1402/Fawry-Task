@@ -35,7 +35,7 @@ The project was developed following an agile sprint methodology, evolving from a
 -   **Language**: Java 11 (or higher)
 -   **UI Framework**: JavaFX
 -   **Build Tool**: Maven or Gradle (project is compatible with both)
--   **IDE**: IntelliJ IDEA / Eclipse
+-   **IDE**: IntelliJ IDEA 
 
 ## Getting Started
 
