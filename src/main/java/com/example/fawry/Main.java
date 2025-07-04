@@ -21,7 +21,7 @@ public class Main {
         Product expiredBread = new FoodProduct("Expired Bread", 2.00, 5, LocalDate.now().minusDays(1), 0.4);
 
         // Create a customer
-        Customer customer = new Customer("John Doe", 1500.00);
+        Customer customer = new Customer("John Doe", "johndoe", "password123", 1500.00);
 
         System.out.println("Welcome, " + customer.getName() + "! Your balance is $" + customer.getBalance());
         System.out.println("Available products:");

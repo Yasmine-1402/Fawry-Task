@@ -1,16 +1,19 @@
 package com.example.fawry.ui;
 
-import javafx.application.Application;
-import com.example.fawry.cart.Cart;
+import com.example.fawry.cart.*;
 import com.example.fawry.exception.*;
 import com.example.fawry.model.*;
-import com.example.fawry.service.*;
+import com.example.fawry.service.AuthenticationService;
+import com.example.fawry.service.CheckoutService;
+import com.example.fawry.service.ShippingService;
+import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -22,10 +25,15 @@ import java.util.Map;
 
 public class ECommerceApp extends Application {
 
- private List<Product> inventory;
-    private Customer customer;
-    private Cart cart;
+    // Services and Data
+    private AuthenticationService authService;
     private CheckoutService checkoutService;
+    private List<Product> inventory;
+    private Cart cart;
+
+    // UI State
+    private Stage primaryStage;
+    private Customer currentCustomer; // The currently logged-in customer
 
     // UI Components
     private VBox productListView;
@@ -39,21 +47,124 @@ public class ECommerceApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        // 1. Initialize backend data and services
+        this.primaryStage = primaryStage;
         initializeData();
 
         primaryStage.setTitle("E-Commerce Store");
+        showLoginScreen(); // Start with the login screen
+        primaryStage.show();
+    }
 
-        // 2. Setup main layout
+    private void initializeData() {
+        this.authService = new AuthenticationService();
+        ShippingService shippingService = new ShippingService();
+        this.checkoutService = new CheckoutService(shippingService);
+        this.cart = new Cart();
+
+        inventory = new ArrayList<>();
+        inventory.add(new ElectronicProduct("Smart TV", 899.99, 15, 15.5));
+        inventory.add(new ElectronicProduct("Laptop Pro", 1499.50, 8, 2.2));
+        inventory.add(new FoodProduct("Artisan Cheese", 25.00, 30, LocalDate.now().plusMonths(2), 0.5));
+        inventory.add(new FoodProduct("Organic Milk", 4.50, 50, LocalDate.now().plusDays(10), 1.0));
+        inventory.add(new FoodProduct("Stale Crackers (Expired)", 1.99, 10, LocalDate.now().minusDays(1), 0.3));
+    }
+
+    private void showLoginScreen() {
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(25, 25, 25, 25));
+
+        Label sceneTitle = new Label("Welcome! Please Login or Sign Up");
+        sceneTitle.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        grid.add(sceneTitle, 0, 0, 2, 1);
+
+        // --- Fields ---
+        grid.add(new Label("Username:"), 0, 1);
+        TextField userTextField = new TextField();
+        userTextField.setPromptText("jdoe");
+        grid.add(userTextField, 1, 1);
+
+        grid.add(new Label("Password:"), 0, 2);
+        PasswordField pwBox = new PasswordField();
+        pwBox.setPromptText("pass123");
+        grid.add(pwBox, 1, 2);
+
+        grid.add(new Label("Full Name (for signup):"), 0, 3);
+        TextField nameField = new TextField();
+        nameField.setPromptText("John Doe");
+        grid.add(nameField, 1, 3);
+
+        // --- Buttons ---
+        Button loginBtn = new Button("Login");
+        Button signUpBtn = new Button("Sign Up");
+        HBox hbBtn = new HBox(10);
+        hbBtn.setAlignment(Pos.BOTTOM_RIGHT);
+        hbBtn.getChildren().addAll(signUpBtn, loginBtn);
+        grid.add(hbBtn, 1, 4);
+
+        final Label actionTarget = new Label();
+        grid.add(actionTarget, 1, 6);
+
+        // --- Event Handlers ---
+        loginBtn.setOnAction(e -> {
+            String username = userTextField.getText();
+            String password = pwBox.getText();
+            Customer customer = authService.login(username, password);
+
+            if (customer != null) {
+                this.currentCustomer = customer;
+                showStoreScreen(); // Transition to main store
+            } else {
+                actionTarget.setTextFill(Color.FIREBRICK);
+                actionTarget.setText("Invalid username or password.");
+            }
+        });
+
+        signUpBtn.setOnAction(e -> {
+            String name = nameField.getText();
+            String username = userTextField.getText();
+            String password = pwBox.getText();
+
+            if (name.isEmpty() || username.isEmpty() || password.isEmpty()) {
+                actionTarget.setTextFill(Color.FIREBRICK);
+                actionTarget.setText("All fields required for signup.");
+                return;
+            }
+
+            boolean success = authService.register(name, username, password);
+            if (success) {
+                actionTarget.setTextFill(Color.GREEN);
+                actionTarget.setText("Signup successful! Please log in.");
+            } else {
+                actionTarget.setTextFill(Color.FIREBRICK);
+                actionTarget.setText("Username '" + username + "' is already taken.");
+            }
+        });
+
+
+        Scene scene = new Scene(grid, 400, 300);
+        primaryStage.setScene(scene);
+    }
+
+    private void showStoreScreen() {
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(10));
 
-        // Top: Customer Info
+        // Top: Customer Info with Logout
         customerInfoLabel = new Label();
         updateCustomerInfo();
         customerInfoLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        BorderPane.setAlignment(customerInfoLabel, Pos.CENTER);
-        root.setTop(customerInfoLabel);
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> {
+            this.currentCustomer = null;
+            this.cart.clearCart();
+            showLoginScreen();
+        });
+        HBox topBar = new HBox(20, customerInfoLabel, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        root.setTop(topBar);
 
         // Center: Product List
         ScrollPane productScrollPane = new ScrollPane();
@@ -66,29 +177,15 @@ public class ECommerceApp extends Application {
         VBox cartPane = createCartPane();
         root.setRight(cartPane);
 
-        // 3. Populate UI with initial data
+        // Populate UI with data
         refreshProductList();
+        updateCartView();
 
-        // 4. Show the stage
         Scene scene = new Scene(root, 900, 600);
         primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
-    private void initializeData() {
-        ShippingService shippingService = new ShippingService();
-        checkoutService = new CheckoutService(shippingService);
-        cart = new Cart();
-        customer = new Customer("Jane Smith", 2000.00);
-
-        inventory = new ArrayList<>();
-        inventory.add(new ElectronicProduct("Smart TV", 899.99, 15, 15.5));
-        inventory.add(new ElectronicProduct("Laptop Pro", 1499.50, 8, 2.2));
-        inventory.add(new FoodProduct("Artisan Cheese", 25.00, 30, LocalDate.now().plusMonths(2), 0.5));
-        inventory.add(new FoodProduct("Organic Milk", 4.50, 50, LocalDate.now().plusDays(10), 1.0));
-        inventory.add(new FoodProduct("Stale Crackers (Expired)", 1.99, 10, LocalDate.now().minusDays(1), 0.3));
-    }
-
+    // This method creates the cart view. It's unchanged from the previous version.
     private VBox createCartPane() {
         VBox cartPane = new VBox(15);
         cartPane.setPadding(new Insets(10));
@@ -112,6 +209,7 @@ public class ECommerceApp extends Application {
         return cartPane;
     }
 
+    // Unchanged from previous version
     private void refreshProductList() {
         productListView.getChildren().clear();
         for (Product product : inventory) {
@@ -119,6 +217,7 @@ public class ECommerceApp extends Application {
         }
     }
 
+    // Unchanged from previous version
     private Node createProductView(Product product) {
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -142,7 +241,6 @@ public class ECommerceApp extends Application {
 
         addButton.setOnAction(e -> {
             int quantityToAdd = quantitySpinner.getValue();
-            // Basic validation for UI
             if (product.getQuantity() >= quantityToAdd) {
                 cart.addProduct(product, quantityToAdd);
                 updateCartView();
@@ -151,7 +249,7 @@ public class ECommerceApp extends Application {
             }
         });
 
-        grid.add(nameLabel, 0, 0, 2, 1); // Span 2 columns
+        grid.add(nameLabel, 0, 0, 2, 1);
         grid.add(detailsLabel, 0, 1);
         grid.add(quantitySpinner, 0, 2);
         grid.add(addButton, 1, 2);
@@ -159,6 +257,7 @@ public class ECommerceApp extends Application {
         return grid;
     }
 
+    // Unchanged from previous version
     private void updateCartView() {
         cartView.getChildren().clear();
         Map<Product, Integer> items = cart.getItems();
@@ -176,9 +275,11 @@ public class ECommerceApp extends Application {
         subtotalLabel.setText(String.format("Subtotal: $%.2f", subtotal));
     }
 
+    // Updated to use this.currentCustomer
     private void handleCheckout() {
         try {
-            String receipt = checkoutService.processCheckout(customer, cart);
+            // Pass the currently logged-in customer to the service
+            String receipt = checkoutService.processCheckout(this.currentCustomer, cart);
             showAlert(Alert.AlertType.INFORMATION, "Checkout Successful", receipt);
 
             // Reset and refresh UI
@@ -192,10 +293,14 @@ public class ECommerceApp extends Application {
         }
     }
 
+    // Updated to use this.currentCustomer
     private void updateCustomerInfo() {
-        customerInfoLabel.setText(String.format("Customer: %s | Balance: $%.2f", customer.getName(), customer.getBalance()));
+        if (this.currentCustomer != null) {
+            customerInfoLabel.setText(String.format("Customer: %s | Balance: $%.2f", this.currentCustomer.getName(), this.currentCustomer.getBalance()));
+        }
     }
 
+    // Unchanged from previous version
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
@@ -204,4 +309,3 @@ public class ECommerceApp extends Application {
         alert.showAndWait();
     }
 }
-
